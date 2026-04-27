@@ -1,0 +1,7 @@
+.build/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+DerivedData/
+.DS_Store
+.pi/
