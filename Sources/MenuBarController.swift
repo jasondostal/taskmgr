@@ -23,9 +23,11 @@ final class MenuBarController: NSObject, NSApplicationDelegate, NSWindowDelegate
         popover.behavior = .transient
         popover.animates = false
         popover.contentViewController = NSHostingController(
-            rootView: ContentView(metrics: metricsService, onPin: { [weak self] in
-                self?.detachToWindow()
-            })
+            rootView: ContentView(
+                metrics: metricsService,
+                onPin: { [weak self] in self?.detachToWindow() },
+                onQuit: { [weak self] in self?.quitApp() }
+            )
         )
 
         button.target = self
@@ -65,27 +67,14 @@ final class MenuBarController: NSObject, NSApplicationDelegate, NSWindowDelegate
     }
 
     @objc private func togglePopover() {
-        guard let button = statusItem?.button, let event = NSApp.currentEvent else { return }
-
-        if event.type == .rightMouseUp {
-            showContextMenu(button: button)
-            return
-        }
+        guard popover != nil else { return }
 
         if popover.isShown {
             popover.performClose(nil)
         } else {
-            popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            popover.show(relativeTo: statusItem.button!.bounds, of: statusItem.button!, preferredEdge: .minY)
             popover.contentViewController?.view.window?.makeKey()
         }
-    }
-
-    private func showContextMenu(button: NSStatusBarButton) {
-        let menu = NSMenu()
-        menu.addItem(NSMenuItem(title: "Quit TaskMgr", action: #selector(quitApp), keyEquivalent: "q"))
-        statusItem.menu = menu
-        statusItem.button?.performClick(nil)
-        statusItem.menu = nil
     }
 
     private func detachToWindow() {
@@ -107,7 +96,7 @@ final class MenuBarController: NSObject, NSApplicationDelegate, NSWindowDelegate
         window.collectionBehavior = [.canJoinAllSpaces, .stationary]
         window.delegate = self
         window.contentViewController = NSHostingController(
-            rootView: ContentView(metrics: metricsService, onPin: nil)
+            rootView: ContentView(metrics: metricsService, onPin: nil, onQuit: { [weak self] in self?.quitApp() })
         )
         window.center()
         window.makeKeyAndOrderFront(nil)

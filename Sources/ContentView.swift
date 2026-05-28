@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var metrics: MetricsService
     var onPin: (() -> Void)?
+    var onQuit: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -69,6 +70,22 @@ struct ContentView: View {
         .frame(width: 340)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+
+        // Quit
+        if onQuit != nil {
+            Divider()
+                .padding(.horizontal, 12)
+            HStack {
+                Spacer()
+                Button("Quit TaskMgr") { onQuit?() }
+                    .buttonStyle(.borderless)
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 4)
+            .frame(width: 340)
+        }
     }
 
     private var gpuDetail: String {
