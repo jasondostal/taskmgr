@@ -9,6 +9,7 @@ final class MetricsService: ObservableObject {
         gpu: SystemMetrics.GPU(utilizationPercent: 0, memoryUsedBytes: nil, coreCount: 0),
         memory: SystemMetrics.Memory(usedBytes: 0, totalBytes: 0),
         disk: SystemMetrics.Disk(totalBytes: 0, freeBytes: 0, readBytesPerSec: 0, writeBytesPerSec: 0),
+        network: SystemMetrics.Network(rxBytesPerSec: 0, txBytesPerSec: 0, interfaceCount: 0),
         timestamp: Date()
     )
 
@@ -16,9 +17,11 @@ final class MetricsService: ObservableObject {
     @Published var gpuHistory: [Double] = []
     @Published var memHistory: [Double] = []
     @Published var diskHistory: [Double] = []
+    @Published var netHistory: [Double] = []
 
     private let cpuCollector = CPUCollector()
     private let diskCollector = DiskCollector()
+    private let networkCollector = NetworkCollector()
     private var timer: Timer?
 
     func start(interval: TimeInterval = 2.0) {
@@ -31,12 +34,14 @@ final class MetricsService: ObservableObject {
             let gpu = GPUMetrics.collect()
             let memory = MemoryMetrics.collect()
             let disk = self.diskCollector.collect()
+            let network = self.networkCollector.collect()
 
             let metric = SystemMetrics(
                 cpu: SystemMetrics.CPU(overallPercent: cpuOverall, perCore: cpuPerCore),
                 gpu: gpu,
                 memory: memory,
                 disk: disk,
+                network: network,
                 timestamp: Date()
             )
 
@@ -49,6 +54,8 @@ final class MetricsService: ObservableObject {
                     ? Double(metric.disk.readBytesPerSec + metric.disk.writeBytesPerSec) / 1_000_000
                     : 0
                 self.append(&self.diskHistory, ioAvg)
+                let netTotal = Double(metric.network.rxBytesPerSec + metric.network.txBytesPerSec) / 1_000_000
+                self.append(&self.netHistory, netTotal)
             }
         }
         timer?.tolerance = interval * 0.5

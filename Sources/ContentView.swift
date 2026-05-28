@@ -66,6 +66,14 @@ struct ContentView: View {
                 sparkline: metrics.diskHistory,
                 color: .green
             )
+            Divider().padding(.vertical, 2)
+            MetricRow(
+                label: "Net",
+                percent: netPercent,
+                detail: netDetail,
+                sparkline: metrics.netHistory,
+                color: .cyan
+            )
         }
         .frame(width: 340)
         .padding(.horizontal, 12)
@@ -100,6 +108,22 @@ struct ContentView: View {
         let w = metrics.metrics.disk.writeBytesPerSec
         if r == 0 && w == 0 { return "" }
         return "R \(r.sizeString)/s  W \(w.sizeString)/s"
+    }
+
+    /// Network throughput as % of 1 Gbps reference
+    private var netPercent: Double {
+        let totalBps = Double(metrics.metrics.network.rxBytesPerSec + metrics.metrics.network.txBytesPerSec)
+        let gbps = 125_000_000.0 // 1 Gbps in bytes/sec
+        return min(totalBps / gbps * 100.0, 100.0)
+    }
+
+    private var netDetail: String {
+        let rx = metrics.metrics.network.rxBytesPerSec
+        let tx = metrics.metrics.network.txBytesPerSec
+        let ifaces = metrics.metrics.network.interfaceCount
+        if rx == 0 && tx == 0 && ifaces == 0 { return "no interfaces" }
+        if rx == 0 && tx == 0 { return "\(ifaces) interface\(ifaces == 1 ? "" : "es") idle" }
+        return "↓\(rx.sizeString)/s  ↑\(tx.sizeString)/s"
     }
 
     private var cpuColor: Color {

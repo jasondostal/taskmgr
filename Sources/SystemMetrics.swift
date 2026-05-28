@@ -31,10 +31,17 @@ struct SystemMetrics {
         }
     }
 
+    struct Network {
+        let rxBytesPerSec: UInt64
+        let txBytesPerSec: UInt64
+        let interfaceCount: Int
+    }
+
     let cpu: CPU
     let gpu: GPU
     let memory: Memory
     let disk: Disk
+    let network: Network
     let timestamp: Date
 }
 
