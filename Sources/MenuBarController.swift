@@ -1,13 +1,13 @@
 import AppKit
 import SwiftUI
 
-final class MenuBarController: NSObject, NSApplicationDelegate {
+final class MenuBarController: NSObject, NSApplicationDelegate, NSWindowDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
+    private var detachedWindow: NSPanel?
     private let metricsService = MetricsService()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Disable automatic termination — we're a menu bar app that should stay alive
         ProcessInfo.processInfo.automaticTerminationSupportEnabled = false
 
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -20,17 +20,17 @@ final class MenuBarController: NSObject, NSApplicationDelegate {
 
         popover = NSPopover()
         popover.contentSize = NSSize(width: 370, height: 280)
-        popover.behavior = .applicationDefined
+        popover.behavior = .transient
         popover.animates = false
         popover.contentViewController = NSHostingController(
-            rootView: ContentView(metrics: metricsService, quitAction: { [weak self] in
-                self?.quitApp()
+            rootView: ContentView(metrics: metricsService, onPin: { [weak self] in
+                self?.detachToWindow()
             })
         )
 
         button.target = self
         button.action = #selector(togglePopover)
-        button.sendAction(on: [.leftMouseUp])
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
 
         metricsService.start()
         setupStatusTitleUpdates()
@@ -65,7 +65,12 @@ final class MenuBarController: NSObject, NSApplicationDelegate {
     }
 
     @objc private func togglePopover() {
-        guard let button = statusItem?.button, popover != nil else { return }
+        guard let button = statusItem?.button, let event = NSApp.currentEvent else { return }
+
+        if event.type == .rightMouseUp {
+            showContextMenu(button: button)
+            return
+        }
 
         if popover.isShown {
             popover.performClose(nil)
@@ -75,9 +80,50 @@ final class MenuBarController: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func showContextMenu(button: NSStatusBarButton) {
+        let menu = NSMenu()
+        menu.addItem(NSMenuItem(title: "Quit TaskMgr", action: #selector(quitApp), keyEquivalent: "q"))
+        statusItem.menu = menu
+        statusItem.button?.performClick(nil)
+        statusItem.menu = nil
+    }
+
+    private func detachToWindow() {
+        if let existing = detachedWindow, existing.isVisible {
+            existing.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        popover.performClose(nil)
+
+        let window = NSPanel(
+            contentRect: NSRect(x: 0, y: 0, width: 370, height: 310),
+            styleMask: [.titled, .closable, .resizable, .nonactivatingPanel],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "TaskMgr"
+        window.isFloatingPanel = true
+        window.collectionBehavior = [.canJoinAllSpaces, .stationary]
+        window.delegate = self
+        window.contentViewController = NSHostingController(
+            rootView: ContentView(metrics: metricsService, onPin: nil)
+        )
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        detachedWindow = window
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        if let window = notification.object as? NSPanel, window === detachedWindow {
+            detachedWindow = nil
+        }
+    }
+
     @objc private func quitApp() {
         metricsService.stop()
         popover?.performClose(nil)
+        detachedWindow?.close()
         NSApplication.shared.terminate(nil)
     }
 

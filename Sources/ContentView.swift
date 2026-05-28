@@ -2,19 +2,22 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var metrics: MetricsService
-    var quitAction: (() -> Void)?
+    var onPin: (() -> Void)?
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header with quit button
+            // Header with pin button
             HStack {
                 Spacer()
-                Button(action: { quitAction?() }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
+                if onPin != nil {
+                    Button(action: { onPin?() }) {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 12))
+                    }
+                    .buttonStyle(.borderless)
+                    .help("Detach into window")
+                    .padding(4)
                 }
-                .buttonStyle(.plain)
             }
             .padding(.bottom, 2)
 
