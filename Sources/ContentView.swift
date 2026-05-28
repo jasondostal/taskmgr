@@ -199,26 +199,30 @@ struct DiskCapacityIcon: View {
     }
 
     var body: some View {
+        let iconSize: CGFloat = 28
         ZStack {
             // Background: the drive icon outline
             Image(systemName: "internaldrive")
-                .font(.system(size: 11))
-                .foregroundColor(.secondary.opacity(0.3))
+                .font(.system(size: iconSize))
+                .foregroundColor(.secondary.opacity(0.25))
 
-            // Fill: clipped to the drive shape
+            // Fill: clipped to the drive shape, scaled so 100% = truly full
             GeometryReader { geo in
-                let fillHeight = geo.size.height * CGFloat(min(percent, 100) / 100)
+                // Drive body occupies roughly the middle 60% of the glyph
+                let bodyTop = geo.size.height * 0.2
+                let bodyHeight = geo.size.height * 0.65
+                let fillHeight = bodyHeight * CGFloat(min(percent, 100) / 100)
                 Rectangle()
                     .fill(fillColor)
                     .frame(height: fillHeight)
-                    .offset(y: geo.size.height - fillHeight)
+                    .offset(y: bodyTop + bodyHeight - fillHeight)
             }
             .mask(
                 Image(systemName: "internaldrive")
-                    .font(.system(size: 11))
+                    .font(.system(size: iconSize))
             )
         }
-        .frame(width: 16, height: 14)
+        .frame(width: iconSize + 8, height: iconSize + 4)
         .help(String(format: "Disk %.0f%% used", percent))
     }
 }
