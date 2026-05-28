@@ -29,8 +29,8 @@ struct ContentView: View {
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.secondary)
                     CoreHeatmap(perCore: metrics.metrics.cpu.perCore)
-                    Spacer()
                     DiskCapacityIcon(percent: metrics.metrics.disk.percentUsed)
+                    Spacer()
                 }
                 .padding(.bottom, 4)
             }
