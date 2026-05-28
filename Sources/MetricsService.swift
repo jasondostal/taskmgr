@@ -16,7 +16,8 @@ final class MetricsService: ObservableObject {
     @Published var cpuHistory: [Double] = []
     @Published var gpuHistory: [Double] = []
     @Published var memHistory: [Double] = []
-    @Published var diskHistory: [Double] = []
+    @Published var diskReadHistory: [Double] = []
+    @Published var diskWriteHistory: [Double] = []
     @Published var netHistory: [Double] = []
 
     private let cpuCollector = CPUCollector()
@@ -50,10 +51,8 @@ final class MetricsService: ObservableObject {
                 self.append(&self.cpuHistory, metric.cpu.overallPercent)
                 self.append(&self.gpuHistory, metric.gpu.utilizationPercent)
                 self.append(&self.memHistory, metric.memory.percentUsed)
-                let ioAvg = metric.disk.readBytesPerSec > 0 || metric.disk.writeBytesPerSec > 0
-                    ? Double(metric.disk.readBytesPerSec + metric.disk.writeBytesPerSec) / 1_000_000
-                    : 0
-                self.append(&self.diskHistory, ioAvg)
+                self.append(&self.diskReadHistory, Double(metric.disk.readBytesPerSec) / 1_000_000)
+                self.append(&self.diskWriteHistory, Double(metric.disk.writeBytesPerSec) / 1_000_000)
                 let netTotal = Double(metric.network.rxBytesPerSec + metric.network.txBytesPerSec) / 1_000_000
                 self.append(&self.netHistory, netTotal)
             }

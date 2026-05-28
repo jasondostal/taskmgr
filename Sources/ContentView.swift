@@ -22,7 +22,7 @@ struct ContentView: View {
             }
             .padding(.bottom, 2)
 
-            // Core heatmap
+            // Core heatmap + disk capacity icon
             if !metrics.metrics.cpu.perCore.isEmpty {
                 HStack {
                     Text("Cores")
@@ -30,6 +30,7 @@ struct ContentView: View {
                         .foregroundColor(.secondary)
                     CoreHeatmap(perCore: metrics.metrics.cpu.perCore)
                     Spacer()
+                    DiskCapacityIcon(percent: metrics.metrics.disk.percentUsed)
                 }
                 .padding(.bottom, 4)
             }
@@ -59,12 +60,11 @@ struct ContentView: View {
                 color: memoryColor
             )
             Divider().padding(.vertical, 2)
-            MetricRow(
-                label: "Disk",
-                percent: metrics.metrics.disk.percentUsed,
-                detail: diskIO,
-                sparkline: metrics.diskHistory,
-                color: .green
+            DiskRow(
+                readHistory: metrics.diskReadHistory,
+                writeHistory: metrics.diskWriteHistory,
+                readBps: metrics.metrics.disk.readBytesPerSec,
+                writeBps: metrics.metrics.disk.writeBytesPerSec
             )
             Divider().padding(.vertical, 2)
             MetricRow(
@@ -101,13 +101,6 @@ struct ContentView: View {
         let cores = c > 0 ? "\(c) cores" : ""
         let vram = metrics.metrics.gpu.memoryUsedBytes.map { ", \($0.sizeString)" } ?? ""
         return "\(cores)\(vram)"
-    }
-
-    private var diskIO: String {
-        let r = metrics.metrics.disk.readBytesPerSec
-        let w = metrics.metrics.disk.writeBytesPerSec
-        if r == 0 && w == 0 { return "" }
-        return "R \(r.sizeString)/s  W \(w.sizeString)/s"
     }
 
     /// Network throughput as % of 1 Gbps reference
@@ -188,6 +181,81 @@ struct MetricRow: View {
                     Text(detail)
                         .font(.system(size: 9))
                         .foregroundColor(.secondary)
+                }
+            }
+        }
+    }
+}
+
+struct DiskCapacityIcon: View {
+    let percent: Double
+
+    private var fillColor: Color {
+        switch percent {
+        case ..<60: return .green
+        case ..<85: return .yellow
+        default:    return .red
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            // Background: the drive icon outline
+            Image(systemName: "internaldrive")
+                .font(.system(size: 11))
+                .foregroundColor(.secondary.opacity(0.3))
+
+            // Fill: clipped to the drive shape
+            GeometryReader { geo in
+                let fillHeight = geo.size.height * CGFloat(min(percent, 100) / 100)
+                Rectangle()
+                    .fill(fillColor)
+                    .frame(height: fillHeight)
+                    .offset(y: geo.size.height - fillHeight)
+            }
+            .mask(
+                Image(systemName: "internaldrive")
+                    .font(.system(size: 11))
+            )
+        }
+        .frame(width: 16, height: 14)
+        .help(String(format: "Disk %.0f%% used", percent))
+    }
+}
+
+struct DiskRow: View {
+    let readHistory: [Double]
+    let writeHistory: [Double]
+    let readBps: UInt64
+    let writeBps: UInt64
+
+    var body: some View {
+        VStack(spacing: 2) {
+            HStack(alignment: .bottom) {
+                Text("Disk")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.secondary)
+                Spacer()
+                if readBps > 0 || writeBps > 0 {
+                    Text("↓\(readBps.sizeString)/s  ↑\(writeBps.sizeString)/s")
+                        .font(.system(size: 10, weight: .medium).monospacedDigit())
+                } else {
+                    Text("idle")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            HStack(spacing: 4) {
+                // Read sparkline
+                if readHistory.count > 1 {
+                    Sparkline(data: readHistory, color: .green.opacity(0.7))
+                        .frame(maxWidth: .infinity, minHeight: 14)
+                }
+                // Write sparkline
+                if writeHistory.count > 1 {
+                    Sparkline(data: writeHistory, color: .teal.opacity(0.7))
+                        .frame(maxWidth: .infinity, minHeight: 14)
                 }
             }
         }
